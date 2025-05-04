@@ -1,4 +1,5 @@
-SPY ON SBUS in SSH Session
+<pre>
+ SPY ON SBUS in SSH Session
 
 /unitree/sbin/mscli stop sbus_handle
 /unitree/module/sbus_handle/sbus_handle
@@ -59,7 +60,7 @@ CH12 992 -> 1500 -> 992
 
 userCmd: 24
 Jump
-
+</pre>
 
 A basic Arduino Sketch to control a Unitree GO2 using the SBUS port.
 This uses the follwing libraries:
