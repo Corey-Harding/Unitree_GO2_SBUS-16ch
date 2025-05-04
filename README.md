@@ -39,7 +39,7 @@ CH10 1712 -> 272 -> 1712
 
 userCmd: 9
 Obstacle Avoidance Off
-CH11 712 -> 272 -> 1712
+CH11 1712 -> 272 -> 1712
 
 userCmd: 14
 Dance
