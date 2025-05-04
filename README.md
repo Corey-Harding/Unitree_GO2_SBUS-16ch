@@ -25,7 +25,7 @@ Stand
 userCmd: 3
 Damping Mode
 
-userCmd: 3
+userCmd: 4
 Fall Recover
 
 userCmd: 5
