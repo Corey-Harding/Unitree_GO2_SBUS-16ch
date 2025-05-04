@@ -1,14 +1,15 @@
-'''
+```
 For a working 8ch implementation use the original creators fork here: https://github.com/mechzrobotics/Unitree_GO2_SBUS
 
-This fork is for research and development towards getting the 16ch implementation working, hopefully bringing with it additional commands that are not available on the 8ch implementation.
+This fork is for research and development towards getting the 16ch implementation working.
+Hopefully bringing with it additional commands that are not available on the 8ch implementation.
  
  SPY ON SBUS in SSH Session
 
 /unitree/sbin/mscli stop sbus_handle
 /unitree/module/sbus_handle/sbus_handle
 
-Be sure to restart the sbus_handle before you exit ssh session or you will lose sbus until you restart the service
+Be sure to restart the sbus_handle before you exit ssh session or you will lose SBUS until you restart the service.
 
 16 Channel Notes
 
@@ -75,14 +76,13 @@ Bolder Flight SBUS - Read and write SBUS commands
  - https://github.com/bolderflight/sbus
 
 AsyncTCP
- -https://github.com/ESP32Async/AsyncTCP
+ - https://github.com/ESP32Async/AsyncTCP
 
 ESPAsyncWebServer
- -https://github.com/ESP32Async/ESPAsyncWebServer
+ - https://github.com/ESP32Async/ESPAsyncWebServer
 
  ElegantOTA
-  -https://github.com/ayushsharma82/ElegantOTA
-'''
+  - https://github.com/ayushsharma82/ElegantOTA
 
 Requirements:
 - XBox Controller with BLE
@@ -90,3 +90,4 @@ Requirements:
 - Buck Converter - LM2596 Used
 - XT30 Male Power Connector
 - 3P 1.25mm GH Connector
+```
