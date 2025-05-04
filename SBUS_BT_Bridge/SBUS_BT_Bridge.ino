@@ -1,12 +1,29 @@
+// Change esp32-s3 core frequency to 80mhz to run cooler and draw less power
+
 #include <Bluepad32.h>
 #include "sbus.h"
+
+//OTAUPDATE
+#include <WiFi.h>
+#include <AsyncTCP.h>
+#include <ESPAsyncWebServer.h>
+#include <ElegantOTA.h>
+
+// Creates a WIFI Access Point
+// OTA Updates via
+// http://192.168.4.1/update
+const char* ssid = "SBUS";
+const char* password = "theroboverse";
+
+AsyncWebServer server(80);
+//ENDOTAUPDATE
 
 ControllerPtr myControllers[BP32_MAX_GAMEPADS];
 
 /* SBUS object, reading SBUS */
-bfs::SbusRx sbus_rx(&Serial0, D7, D6, true);
+bfs::SbusRx sbus_rx(&Serial0, 44, 43, true);
 /* SBUS object, writing SBUS */
-bfs::SbusTx sbus_tx(&Serial0, D7, D6, true);
+bfs::SbusTx sbus_tx(&Serial0, 44, 43, true);
 /* SBUS data */
 bfs::SbusData data;
 
@@ -23,6 +40,14 @@ struct SBUS_DATA{
   int32_t CH6;
   int32_t CH7;
   int32_t CH8;
+  int32_t CH9;
+  int32_t CH10;
+  int32_t CH11;
+  int32_t CH12;
+  int32_t CH13;
+  int32_t CH14;
+  int32_t CH15;
+  int32_t CH16;
 };
 
 
@@ -114,12 +139,18 @@ void writeSBUS(SBUS_DATA my_data){
   data.ch[1] = my_data.Ry;
   data.ch[2] = my_data.Ly;
   data.ch[3] = my_data.Lx;
-  data.ch[4] = my_data.CH5; // CH5 default 992
-  data.ch[5] = my_data.CH6; // CH6
-  data.ch[6] = my_data.CH7; // CH7
-  data.ch[7] = my_data.CH8; // CH8
-  data.ch[8] = 1690;
-  data.ch[9] = 154;
+  data.ch[4] = my_data.CH5;
+  data.ch[5] = my_data.CH6;
+  data.ch[6] = my_data.CH7;
+  data.ch[7] = 0;
+  data.ch[8] = my_data.CH9;
+  data.ch[9] = my_data.CH10;
+  data.ch[10] = my_data.CH11;
+  data.ch[11] = my_data.CH12;
+  data.ch[12] = my_data.CH13;
+  data.ch[13] = 1690;
+  data.ch[14] = 154;
+  data.ch[15] = 0;
 
   sbus_tx.data(data);
   sbus_tx.Write();
@@ -133,7 +164,7 @@ void processGamepad(ControllerPtr ctl) {
 
     // JoyStick States:
     int32_t Lx = map(ctl->axisX(), -512, 511, 432, 1552); 
-    int32_t Ly = map(ctl->axisY(), 511, -512, 192, 1792);
+    int32_t Ly = map(ctl->axisY(), 511, -512, 272, 1712);
     int32_t Rx = map(ctl->axisRX(), -512, 511, 432, 1552);  
     int32_t Ry = map(ctl->axisRY(), -512, 511, 432, 1552);
 
@@ -163,20 +194,38 @@ void processGamepad(ControllerPtr ctl) {
     R1 = ctl->r1();
     R2 = ctl->r2();
     
+    // Low/Mid/High Flags
 
-    // MODE FLAGS:
-    int32_t MODE1 = 992;
-    int32_t MODE2 = 192;
-    int32_t MODE3 = 1792;
-
-    int32_t _LOW = 192;
+    //See readme file for semi-confirmed values
+  
+    //May also be two high values, one for click and one for long press.
+    int32_t _LOW = 1712;
     int32_t _MID = 992;
-    int32_t _HIGH = 1792;
+    int32_t _HIGH = 272;
+  
+    int32_t _CLICK = 1500; //not used yet
+    int32_t _LONGPRESS = 992; //not used yet
 
-    int32_t CH5_STATE = MODE1;
-    int32_t CH6_STATE = _LOW;
-    int32_t CH7_STATE = _LOW;
-    int32_t CH8_STATE = _MID;
+    int32_t _LSCROLLWHEELMID = 992;
+    int32_t _LSCROLLWHEELPLUS = 1500;
+    int32_t _LSCROLLWHEELFULL = 1712;
+
+    int32_t _RSCROLLWHEELMID = 1712;
+    int32_t _RSCROLLWHEELPLUS = 992;
+    int32_t _RSCROLLWHEELFULL = 1500;
+
+    int32_t CH5_STATE = _MID;  //Ch5 Low(L2)/Mid(No-Press)/High(L1) ???
+    int32_t CH6_STATE = _MID;  //Ch6 Low(R2)/Mid(No-Press)/High(R1) ???
+    int32_t CH7_STATE = 0;     // RESERVED ?
+    int32_t CH8_STATE = _LOW;  //CH8 High(A)
+    int32_t CH9_STATE = _LOW;  //CH9 High(B)
+    int32_t CH10_STATE = _LOW; //CH10 High(X)
+    int32_t CH11_STATE = _LOW; //CH11 High(Y)
+    int32_t CH12_STATE = _LSCROLLWHEELMID; //CH12 High(Select)
+    int32_t CH13_STATE = _RSCROLLWHEELMID; //CH13 992(Start)/1500(Double Click Start)
+    int32_t CH14_STATE = 1690; //CH14 ?
+    int32_t CH15_STATE = 154;  //CH15 ?
+    int32_t CH16_STATE = 0;    //CH16 ?
 
     // Store Values Here to write to SBUS TX
     SBUS_DATA tx_data;
@@ -187,32 +236,36 @@ void processGamepad(ControllerPtr ctl) {
     tx_data.Ry = Ry;
     tx_data.CH5 = CH5_STATE;
     tx_data.CH6 = CH6_STATE;
-    tx_data.CH7 = CH7_STATE;
+    tx_data.CH7 = 0;
     tx_data.CH8 = CH8_STATE;
+    tx_data.CH9 = CH9_STATE;
+    tx_data.CH10 = CH10_STATE;
+    tx_data.CH11 = CH11_STATE;
+    tx_data.CH12 = CH12_STATE;
+    tx_data.CH13 = CH13_STATE;
+    tx_data.CH14 = 1690;
+    tx_data.CH15 = 154;
+    tx_data.CH16 = 0;
+
     
-    // START BUTTON - Unlock
-    if(START == true){
+    // START BUTTON - Unlock/Walking Mode("Single Press")
+    if(START == 1){
       if(START_Flag == 0){
-        CH5_STATE = MODE1;
-        CH7_STATE = _LOW;
-        tx_data.CH5 = CH5_STATE;
-        tx_data.CH7 = CH7_STATE;
+
+        CH13_STATE = _RSCROLLWHEELMID;
+        tx_data.CH13 = CH13_STATE;
 
         writeSBUS(tx_data);
         delayMicroseconds(600);
 
-        CH5_STATE = MODE1;
-        CH7_STATE = _HIGH;
-        tx_data.CH5 = CH5_STATE;
-        tx_data.CH7 = CH7_STATE;
+        CH13_STATE = _RSCROLLWHEELPLUS;
+        tx_data.CH13 = CH13_STATE;
 
         writeSBUS(tx_data);
         delayMicroseconds(600);
 
-        CH5_STATE = MODE1;
-        CH7_STATE = _LOW;
-        tx_data.CH5 = CH5_STATE;
-        tx_data.CH7 = CH7_STATE;
+        CH13_STATE = _RSCROLLWHEELMID;
+        tx_data.CH13 = CH13_STATE;
 
         writeSBUS(tx_data);
         delayMicroseconds(600);
@@ -227,29 +280,24 @@ void processGamepad(ControllerPtr ctl) {
       START_Flag = 0;
     }
 
-    // SELECT BUTTON - Damping State
+    // SELECT BUTTON - Pose Mode ??? (Doesnt Work Yet)
     if(SELECT == 1){
       if(SELECT_Flag == 0){
-        CH5_STATE = MODE1;
-        CH6_STATE = _LOW;
-        tx_data.CH5 = CH5_STATE;
-        tx_data.CH6 = CH6_STATE;
+
+        CH12_STATE = _LSCROLLWHEELMID;
+        tx_data.CH12 = CH12_STATE;
 
         writeSBUS(tx_data);
         delayMicroseconds(600);
 
-        CH5_STATE = MODE1;
-        CH6_STATE = _HIGH;
-        tx_data.CH5 = CH5_STATE;
-        tx_data.CH6 = CH6_STATE;
+        CH12_STATE = _LSCROLLWHEELPLUS;
+        tx_data.CH12 = CH12_STATE;
 
         writeSBUS(tx_data);
         delayMicroseconds(600);
-
-        CH5_STATE = MODE1;
-        CH6_STATE = _LOW;
-        tx_data.CH5 = CH5_STATE;
-        tx_data.CH6 = CH6_STATE;
+        
+        CH12_STATE = _LSCROLLWHEELMID;
+        tx_data.CH12 = CH12_STATE;
 
         writeSBUS(tx_data);
         delayMicroseconds(600);
@@ -265,30 +313,30 @@ void processGamepad(ControllerPtr ctl) {
     }
 
     // DPAD BUTTONS
-    // DPAD UP BUTTON - Fall Recover
+    // DPAD UP BUTTON - Fall Recover ??? (Doesnt Work Yet)
     if(DPAD_UP == 1){
-
       if(D_UP_Flag == 0){
-        CH5_STATE = MODE2;
-        CH7_STATE = _LOW;
+
+        CH5_STATE = _MID;
+        CH10_STATE = _LOW;
         tx_data.CH5 = CH5_STATE;
-        tx_data.CH7 = CH7_STATE;
+        tx_data.CH10 = CH10_STATE;
 
         writeSBUS(tx_data);
         delayMicroseconds(600);
 
-        CH5_STATE = MODE2;
-        CH7_STATE = _HIGH;
+        CH5_STATE = _HIGH;
+        CH10_STATE = _HIGH;
         tx_data.CH5 = CH5_STATE;
-        tx_data.CH7 = CH7_STATE;
+        tx_data.CH10 = CH10_STATE;
 
         writeSBUS(tx_data);
         delayMicroseconds(600);
 
-        CH5_STATE = MODE2;
-        CH7_STATE = _LOW;
+        CH5_STATE = _MID;
+        CH10_STATE = _LOW;
         tx_data.CH5 = CH5_STATE;
-        tx_data.CH7 = CH7_STATE;
+        tx_data.CH10 = CH10_STATE;
 
         writeSBUS(tx_data);
         delayMicroseconds(600);
@@ -303,95 +351,11 @@ void processGamepad(ControllerPtr ctl) {
     }
     else{}
 
-    // DPAD DOWN BUTTON - STAND Toggle
-    if (DPAD_DOWN == true) {
+    // DPAD DOWN BUTTON - Crouch ??? (Doesnt Work Yet)
+    if (DPAD_DOWN == 1) {
       if(D_DOWN_Flag == 0){
 
-        if(HIGH_STAND_Flag == 0){
-
-          CH5_STATE = MODE1;
-          CH8_STATE = _MID;
-          tx_data.CH5 = CH5_STATE;
-          tx_data.CH8 = CH8_STATE;
-
-          writeSBUS(tx_data);
-          delayMicroseconds(600);
-
-          CH5_STATE = MODE1;
-          CH8_STATE = _HIGH;
-          tx_data.CH5 = CH5_STATE;
-          tx_data.CH8 = CH8_STATE;
-
-          writeSBUS(tx_data);
-          delayMicroseconds(600);
-
-          CH5_STATE = MODE1;
-          CH8_STATE = _LOW;
-          tx_data.CH5 = CH5_STATE;
-          tx_data.CH8 = CH8_STATE;
-
-          writeSBUS(tx_data);
-          delayMicroseconds(600);
-
-          D_DOWN_Flag = 1;
-          HIGH_STAND_Flag = 1;
-
-          return;
-
-        }
-        else if (HIGH_STAND_Flag == 1) {
-
-          CH5_STATE = MODE1;
-          CH8_STATE = _MID;
-          tx_data.CH5 = CH5_STATE;
-          tx_data.CH8 = CH8_STATE;
-
-          writeSBUS(tx_data);
-          delayMicroseconds(600);
-
-          CH5_STATE = MODE1;
-          CH8_STATE = _LOW;
-          tx_data.CH5 = CH5_STATE;
-          tx_data.CH8 = CH8_STATE;
-
-          writeSBUS(tx_data);
-          delayMicroseconds(600);
-
-          CH5_STATE = MODE1;
-          CH8_STATE = _MID;
-          tx_data.CH5 = CH5_STATE;
-          tx_data.CH8 = CH8_STATE;
-
-          writeSBUS(tx_data);
-          delayMicroseconds(600);
-
-          D_DOWN_Flag = 1;
-          HIGH_STAND_Flag = 0;
-
-          return;
-
-        }
-              
-      } 
-    }
-    else if(DPAD_DOWN == 0 && D_DOWN_Flag == 1){
-      D_DOWN_Flag = 0;
-    }
-    else{}
-
-    // DPAD RIGHT BUTTON - Light Toggle
-    if (DPAD_RIGHT == true) {
-      if(D_RIGHT_Flag == 0){
-
-        CH5_STATE = MODE3;
-        CH8_STATE = _MID;
-        tx_data.CH5 = CH5_STATE;
-        tx_data.CH8 = CH8_STATE;
-
-        writeSBUS(tx_data);
-        delayMicroseconds(600);
-
-        CH5_STATE = MODE3;
+        CH5_STATE = _MID;
         CH8_STATE = _LOW;
         tx_data.CH5 = CH5_STATE;
         tx_data.CH8 = CH8_STATE;
@@ -399,48 +363,50 @@ void processGamepad(ControllerPtr ctl) {
         writeSBUS(tx_data);
         delayMicroseconds(600);
 
-        CH5_STATE = MODE3;
-        CH8_STATE = _MID;
+        CH5_STATE = _HIGH;
+        CH8_STATE = _HIGH;
         tx_data.CH5 = CH5_STATE;
         tx_data.CH8 = CH8_STATE;
 
         writeSBUS(tx_data);
         delayMicroseconds(600);
 
-        D_RIGHT_Flag= 1;
+        CH5_STATE = _MID;
+        CH8_STATE = _LOW;
+        tx_data.CH5 = CH5_STATE;
+        tx_data.CH8 = CH8_STATE;
+
+        writeSBUS(tx_data);
+        delayMicroseconds(600);
+
+        D_DOWN_Flag = 1;
 
         return;
-      } 
+        }  
     }
-    else if(DPAD_RIGHT == 0 && D_RIGHT_Flag == 1){
-      D_RIGHT_Flag = 0;
+    else if(DPAD_DOWN == 0 && D_DOWN_Flag == 1){
+      D_DOWN_Flag = 0;
     }
     else{}
-
-    // DPAD LEFT BUTTON - Continous Movement
+  
+    // DPAD LEFT BUTTON - Continous Walking (Working-Press Start To Turn Off Continuous Walking)
     if (DPAD_LEFT == 1) {
       if(D_LEFT_Flag == 0){
 
-        CH5_STATE = MODE2;
-        CH6_STATE = _LOW;
-        tx_data.CH5 = CH5_STATE;
-        tx_data.CH6 = CH6_STATE;
+        CH13_STATE = _RSCROLLWHEELMID;
+        tx_data.CH13 = CH13_STATE;
 
         writeSBUS(tx_data);
         delayMicroseconds(600);
 
-        CH5_STATE = MODE2;
-        CH6_STATE = _HIGH;
-        tx_data.CH5 = CH5_STATE;
-        tx_data.CH6 = CH6_STATE;
+        CH13_STATE = _RSCROLLWHEELFULL;
+        tx_data.CH13 = CH13_STATE;
 
         writeSBUS(tx_data);
         delayMicroseconds(600);
 
-        CH5_STATE = MODE2;
-        CH6_STATE = _LOW;
-        tx_data.CH5 = CH5_STATE;
-        tx_data.CH6 = CH6_STATE;
+        CH13_STATE = _RSCROLLWHEELMID;
+        tx_data.CH13 = CH13_STATE;
 
         writeSBUS(tx_data);
         delayMicroseconds(600);
@@ -455,181 +421,64 @@ void processGamepad(ControllerPtr ctl) {
     }
     else{}
 
-    // SHOULDER Buttons:
-    // R1 Button - Walking Gait Toggle 
-    if (R1 == true) {
-      if(R1_Flag == 0){
+    // DPAD RIGHT BUTTON - Search Light - Working
+    if (DPAD_RIGHT == 1) {
+      if(D_RIGHT_Flag == 0){
 
-        CH5_STATE = MODE3;
-        CH8_STATE = _MID;
+        CH5_STATE = _MID;
+        CH12_STATE = _LSCROLLWHEELMID;
+        tx_data.CH12 = CH12_STATE;
         tx_data.CH5 = CH5_STATE;
-        tx_data.CH8 = CH8_STATE;
 
         writeSBUS(tx_data);
         delayMicroseconds(600);
 
-        CH5_STATE = MODE3;
-        CH8_STATE = _HIGH;
+        CH5_STATE = _HIGH;
+        CH12_STATE = _LSCROLLWHEELPLUS;
+        tx_data.CH12 = CH12_STATE;
         tx_data.CH5 = CH5_STATE;
-        tx_data.CH8 = CH8_STATE;
 
         writeSBUS(tx_data);
         delayMicroseconds(600);
 
-        CH5_STATE = MODE3;
-        CH8_STATE = _MID;
+        CH5_STATE = _MID;
+        CH12_STATE = _LSCROLLWHEELMID;
+        tx_data.CH12 = CH12_STATE;
         tx_data.CH5 = CH5_STATE;
-        tx_data.CH8 = CH8_STATE;
 
         writeSBUS(tx_data);
         delayMicroseconds(600);
 
-        R1_Flag= 1;
+        D_RIGHT_Flag= 1;
 
         return;
       } 
     }
-    else if(R1 == 0 && R1_Flag == 1){
-      R1_Flag = 0;
+    else if(DPAD_RIGHT == 0 && D_RIGHT_Flag == 1){
+      D_RIGHT_Flag = 0;
     }
     else{}
 
-  
     // FACE Buttons:
-    // X BUTTON - Obstacle Avoidance Toggle
-    if (X == 1) {
-      if(X_Flag == 0){
 
-        if(OBSTACLE_Flag == 0){
-
-          CH5_STATE = MODE2;
-          CH8_STATE = _MID;
-          tx_data.CH5 = CH5_STATE;
-          tx_data.CH8 = CH8_STATE;
-
-          writeSBUS(tx_data);
-          delayMicroseconds(600);
-
-          CH5_STATE = MODE2;
-          CH8_STATE = _LOW;
-          tx_data.CH5 = CH5_STATE;
-          tx_data.CH8 = CH8_STATE;
-
-          writeSBUS(tx_data);
-          delayMicroseconds(600);
-
-          CH5_STATE = MODE2;
-          CH8_STATE = _MID;
-          tx_data.CH5 = CH5_STATE;
-          tx_data.CH8 = CH8_STATE;
-
-          writeSBUS(tx_data);
-          delayMicroseconds(600);
-
-          X_Flag = 1;
-          OBSTACLE_Flag = 1;
-
-          return;
-        }
-        else if (OBSTACLE_Flag == 1) {
-
-          CH5_STATE = MODE2;
-          CH8_STATE = _MID;
-          tx_data.CH5 = CH5_STATE;
-          tx_data.CH8 = CH8_STATE;
-
-          writeSBUS(tx_data);
-          delayMicroseconds(600);
-
-          CH5_STATE = MODE2;
-          CH8_STATE = _HIGH;
-          tx_data.CH5 = CH5_STATE;
-          tx_data.CH8 = CH8_STATE;
-
-          writeSBUS(tx_data);
-          delayMicroseconds(600);
-
-          CH5_STATE = MODE2;
-          CH8_STATE = _MID;
-          tx_data.CH5 = CH5_STATE;
-          tx_data.CH8 = CH8_STATE;
-
-          writeSBUS(tx_data);
-          delayMicroseconds(600);
-
-          X_Flag = 1;
-          OBSTACLE_Flag = 0;
-
-          return;
-        }
-      } 
-    }
-    else if(X_Flag == 1 && X == 0){
-      X_Flag = 0;
-    }
-    else{}
-
-    // Y BUTTON - Dance
-    if(Y == 1){
-      if(Y_Flag == 0){
-        CH5_STATE = MODE3;
-        CH7_STATE = _LOW;
-        tx_data.CH5 = CH5_STATE;
-        tx_data.CH7 = CH7_STATE;
-
-        writeSBUS(tx_data);
-        delayMicroseconds(600);
-
-        CH5_STATE = MODE3;
-        CH7_STATE = _HIGH;
-        tx_data.CH5 = CH5_STATE;
-        tx_data.CH7 = CH7_STATE;
-
-        writeSBUS(tx_data);
-        delayMicroseconds(600);
-
-        CH5_STATE = MODE3;
-        CH7_STATE = _LOW;
-        tx_data.CH5 = CH5_STATE;
-        tx_data.CH7 = CH7_STATE;
-
-        writeSBUS(tx_data);
-        delayMicroseconds(600);
-
-        Y_Flag = 1;
-
-        return;      
-      }
-      else{}
-    }
-    else if(Y_Flag = 1 && Y == 0){
-      Y_Flag = 0;
-    }
-
-    // A BUTTON - Jump
+    // A BUTTON
     if (A == 1) {
       if(A_Flag == 0){
 
-        CH5_STATE = MODE3;
-        CH6_STATE = _LOW;
-        tx_data.CH5 = CH5_STATE;
-        tx_data.CH6 = CH6_STATE;
+        CH8_STATE = _LOW;
+        tx_data.CH8 = CH8_STATE;
 
         writeSBUS(tx_data);
         delayMicroseconds(600);
 
-        CH5_STATE = MODE3;
-        CH6_STATE = _HIGH;
-        tx_data.CH5 = CH5_STATE;
-        tx_data.CH6 = CH6_STATE;
+        CH8_STATE = _HIGH;
+        tx_data.CH8 = CH8_STATE;
 
         writeSBUS(tx_data);
         delayMicroseconds(600);
 
-        CH5_STATE = MODE3;
-        CH6_STATE = _LOW;
-        tx_data.CH5 = CH5_STATE;
-        tx_data.CH6 = CH6_STATE;
+        CH8_STATE = _LOW;
+        tx_data.CH8 = CH8_STATE;
 
         writeSBUS(tx_data);
         delayMicroseconds(600);
@@ -644,16 +493,118 @@ void processGamepad(ControllerPtr ctl) {
     }
     else{}
 
+    // B BUTTON
+    if (B == 1) {
+      if(B_Flag == 0){
+
+        CH9_STATE = _LOW;
+        tx_data.CH9 = CH9_STATE;
+
+        writeSBUS(tx_data);
+        delayMicroseconds(600);
+
+        CH9_STATE = _HIGH;
+        tx_data.CH9 = CH9_STATE;
+
+        writeSBUS(tx_data);
+        delayMicroseconds(600);
+
+        CH9_STATE = _LOW;
+        tx_data.CH9 = CH9_STATE;
+
+        writeSBUS(tx_data);
+        delayMicroseconds(600);
+
+        B_Flag= 1;
+
+        return;
+      } 
+    }
+    else if(B == 0 && B_Flag == 1){
+      B_Flag = 0;
+    }
+    else{}
+
+    // X BUTTON - Obstacle Avoid On (Working)
+    if(X == 1){
+      if(X_Flag == 0){
+
+        CH10_STATE = _LOW;
+        tx_data.CH10 = CH10_STATE;
+
+        writeSBUS(tx_data);
+        delayMicroseconds(600);
+
+        CH10_STATE = _HIGH;
+        tx_data.CH10 = CH10_STATE;
+
+        writeSBUS(tx_data);
+        delayMicroseconds(600);
+
+        CH10_STATE = _LOW;
+        tx_data.CH10 = CH10_STATE;
+
+        writeSBUS(tx_data);
+        delayMicroseconds(600);
+
+        X_Flag = 1;
+
+        return;      
+      }
+      else{}
+    }
+    else if(X_Flag = 1 && X == 0){
+      X_Flag = 0;
+    }
+
+    // Y BUTTON - Obstacle Avoid Off (Working)
+    if(Y == 1){
+      if(Y_Flag == 0){
+
+        CH11_STATE = _LOW;
+        tx_data.CH11 = CH11_STATE;
+
+        writeSBUS(tx_data);
+        delayMicroseconds(600);
+
+        CH11_STATE = _HIGH;
+        tx_data.CH11 = CH11_STATE;
+
+        writeSBUS(tx_data);
+        delayMicroseconds(600);
+
+        CH11_STATE = _LOW;
+        tx_data.CH11 = CH11_STATE;
+
+        writeSBUS(tx_data);
+        delayMicroseconds(600);
+
+        Y_Flag = 1;
+
+        return;      
+      }
+      else{}
+    }
+    else if(Y_Flag = 1 && Y == 0){
+      Y_Flag = 0;
+    }
+
     data.ch[0] = Rx;
     data.ch[1] = Ry;
     data.ch[2] = Ly;
     data.ch[3] = Lx;
-    data.ch[4] = CH5_STATE; //CH5 default 992
-    data.ch[5] = CH6_STATE; //CH6
-    data.ch[6] = CH7_STATE; //CH7
+    data.ch[4] = CH5_STATE;
+    data.ch[5] = CH6_STATE;
+    data.ch[6] = 0;
     data.ch[7] = CH8_STATE;
-    data.ch[8] = 1690;
-    data.ch[9] = 154;
+    data.ch[8] = CH9_STATE;
+    data.ch[9] = CH10_STATE;
+    data.ch[10] = CH11_STATE;
+    data.ch[11] = CH12_STATE;
+    data.ch[12] = CH13_STATE;
+    data.ch[13] = 1690;
+    data.ch[14] = 154;
+    data.ch[15] = 0;
 
     sbus_tx.data(data);
     sbus_tx.Write();
@@ -725,7 +676,28 @@ void readRC(){
 void setup() {
     Serial.begin(115200);
     //while (!Serial) {}  // Waits for serial terminal to be connected - DEBUGGING ONLY
-    
+ 
+//OTAUPDATE
+  WiFi.softAP(ssid, password);
+
+  Serial.println("");
+  Serial.print("SSID: ");
+  Serial.println(ssid);
+  Serial.print("Password: ");
+  Serial.println(password);
+  Serial.print("IP address: ");
+  Serial.println(WiFi.localIP());
+
+  server.on("/", HTTP_GET, [](AsyncWebServerRequest *request) {
+    request->send(200, "text/plain", "Hi! I am ESP32.");
+  });
+
+  server.begin();
+  Serial.println("HTTP server started");
+
+  ElegantOTA.begin(&server);    // Start ElegantOTA
+//ENDOTAUPDATE
+
     /* Begin the SBUS communication */
     sbus_rx.Begin();
     sbus_tx.Begin();
@@ -754,6 +726,11 @@ void setup() {
 
 // Arduino loop function. Runs in CPU 1.
 void loop() {
+
+//OTAUPDATE
+  ElegantOTA.loop();
+//ENDOTAUPDATE
+
     // This call fetches all the controllers' data.
     // Call this function in your main loop.
     bool dataUpdated = BP32.update();
