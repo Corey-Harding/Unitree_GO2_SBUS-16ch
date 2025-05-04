@@ -9,7 +9,10 @@ Hopefully bringing with it additional commands that are not available on the 8ch
 /unitree/sbin/mscli stop sbus_handle
 /unitree/module/sbus_handle/sbus_handle
 
-Be sure to restart the sbus_handle before you exit ssh session or you will lose SBUS until you restart the service.
+Be sure to restart the sbus_handle before you exit ssh session or you will lose sbus until you start the service
+
+/unitree/sbin/mscli start sbus_handle
+
 
 16 Channel Notes
 
