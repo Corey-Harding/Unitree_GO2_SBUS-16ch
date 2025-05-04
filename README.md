@@ -1,4 +1,8 @@
 <pre>
+For a working 8ch implementation use the original creators fork here: https://github.com/mechzrobotics/Unitree_GO2_SBUS
+
+This fork is for research and development towards getting the 16ch implementation working, hopefully bringing with it additional commands that are not available on the 8ch implementation.
+ 
  SPY ON SBUS in SSH Session
 
 /unitree/sbin/mscli stop sbus_handle
