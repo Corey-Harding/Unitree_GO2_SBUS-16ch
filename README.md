@@ -1,4 +1,4 @@
-<pre>
+'''
 For a working 8ch implementation use the original creators fork here: https://github.com/mechzrobotics/Unitree_GO2_SBUS
 
 This fork is for research and development towards getting the 16ch implementation working, hopefully bringing with it additional commands that are not available on the 8ch implementation.
@@ -64,7 +64,6 @@ CH12 992 -> 1500 -> 992
 
 userCmd: 24
 Jump
-</pre>
 
 A basic Arduino Sketch to control a Unitree GO2 using the SBUS port.
 This uses the follwing libraries:
@@ -75,11 +74,19 @@ Bluepad32 - Bluetooth controllers
 Bolder Flight SBUS - Read and write SBUS commands
  - https://github.com/bolderflight/sbus
 
+AsyncTCP
+ -https://github.com/ESP32Async/AsyncTCP
+
+ESPAsyncWebServer
+ -https://github.com/ESP32Async/ESPAsyncWebServer
+
+ ElegantOTA
+  -https://github.com/ayushsharma82/ElegantOTA
+'''
+
 Requirements:
 - XBox Controller with BLE
-- ESP32 - Tested With ESP32S3
+- ESP32 - Waveshare ESP32-S3-Zero
 - Buck Converter - LM2596 Used
 - XT30 Male Power Connector
-- 3P 1.25mm Picoblade
-
-[![Video](https://img.youtube.com/vi/AR2y-QA6O1I/0.jpg)](https://www.youtube.com/watch?v=AR2y-QA6O1I)
+- 3P 1.25mm GH Connector
